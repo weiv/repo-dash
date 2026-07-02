@@ -1,0 +1,17 @@
+{
+  "name": "repo-dash",
+  "version": "1.0.0",
+  "description": "A local dev-state dashboard: branch ladder, git worktrees, Claude Code sessions, and running dev servers, all in one page.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weiv/repo-dash.git"
+  },
+  "bin": {
+    "repo-dash": "./dash.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
