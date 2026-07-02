@@ -242,23 +242,38 @@ function matchWorktree(cwd, worktreeList) {
   return best;
 }
 
+// Claude Code's project directory is keyed by the exact cwd path a session is
+// (or was) running from — non-alphanumeric chars → "-". A session's transcript
+// moves to a NEW project slug whenever its cwd changes (e.g. via EnterWorktree),
+// so scanning only the main checkout's slug misses every session currently
+// working from another worktree — the majority, in a worktree-heavy workflow.
+const slugify = (path) => path.replace(/[^a-zA-Z0-9]/g, '-');
+
 function sessions(worktreeList) {
-  const root = sh('git rev-parse --show-toplevel') || process.cwd();
-  const main = sh('git worktree list').split('\n')[0]?.split(/\s+/)[0] || root;
-  const slug = main.replace(/\//g, '-'); // /Users/x/repo → -Users-x-repo
-  const dir = join(homedir(), '.claude', 'projects', slug);
   const jobsDir = join(homedir(), '.claude', 'jobs');
   const jobs = existsSync(jobsDir)
     ? new Set(readdirSync(jobsDir).filter((f) => !f.includes('.')))
     : new Set();
   const meId = (process.env.CLAUDE_JOB_DIR || '').split('/').pop() || '';
-  if (!existsSync(dir)) return { list: [], dir, jobs: jobs.size };
-  const list = readdirSync(dir)
-    .filter((f) => f.endsWith('.jsonl'))
-    .map((f) => {
+
+  // Scan every known worktree's own slug dir and dedupe by session id, keeping
+  // the freshest copy — a session leaves a stale (often empty) subdirectory
+  // behind in each slug it moves out of, only the current one has a live .jsonl.
+  const dirs = worktreeList.map((w) => join(homedir(), '.claude', 'projects', slugify(w.path)));
+  const byId = new Map();
+  for (const dir of dirs) {
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith('.jsonl')) continue;
       const id = f.replace('.jsonl', '');
-      const jobId = id.slice(0, 8);
       const st = statSync(join(dir, f));
+      const prev = byId.get(id);
+      if (!prev || st.mtimeMs > prev.st.mtimeMs) byId.set(id, { dir, f, st });
+    }
+  }
+  const list = Array.from(byId.entries())
+    .map(([id, { dir, f, st }]) => {
+      const jobId = id.slice(0, 8);
       const meta = sessionMeta(join(dir, f));
       const wt = matchWorktree(meta.cwd, worktreeList);
       return {
@@ -279,7 +294,7 @@ function sessions(worktreeList) {
       };
     })
     .sort((a, b) => b.ms - a.ms);
-  return { list, dir, jobs: jobs.size };
+  return { list, dirs, jobs: jobs.size };
 }
 
 const DEV_PROC_RE = new RegExp(process.env.DASH_DEV_PROCS || 'vite|webpack-dev-server|next dev|http\\.server|nodemon');
