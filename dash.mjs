@@ -438,7 +438,7 @@ function printReport(d) {
 function html(d) {
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const trunc = (s, nn) => (s && s.length > nn ? esc(s.slice(0, nn)) + '…' : esc(s || ''));
-  const link = (href, text) => `<a href="${esc(href)}" rel="noreferrer noopener">${text}</a>`;
+  const link = (href, text, blank) => `<a href="${esc(href)}" rel="noreferrer noopener"${blank ? ' target="_blank"' : ''}>${text}</a>`;
   const ladder = d.ladder
     .map(
       (l) =>
@@ -458,7 +458,7 @@ function html(d) {
       const chips = w.activeSessions
         .map((s) => `<span class=chip style="background:hsl(${s.hue},55%,58%)" title="${esc(s.name || s.short)}"></span>`)
         .join('');
-      return `<tr><td>${w.isAgent ? '' : '★ '}${esc(w.name)}${chips ? ' ' + chips : ''}</td><td>${w.originExists ? link(`${GH}/tree/${encodeURIComponent(w.branch)}`, esc(w.branch)) : esc(w.branch)}</td><td class=dim>${w.sha}</td><td class=n>+${w.ahead}/-${w.behind}</td><td>${w.locked ? '<span class=lock>locked</span> ' : ''}${w.dirty ? `<span class=dirty>${w.dirty} dirty</span>` : '<span class=clean>clean</span>'}</td><td>${w.preview ? link(w.preview, 'preview ↗') : '<span class=dim>—</span>'}</td><td class=dim>${w.lastMs ? ago(w.lastMs) : '—'}${w.lastSubj ? ' · ' + esc(w.lastSubj) : ''}</td></tr>`;
+      return `<tr><td>${w.isAgent ? '' : '★ '}${esc(w.name)}${chips ? ' ' + chips : ''}</td><td>${w.originExists ? link(`${GH}/tree/${encodeURIComponent(w.branch)}`, esc(w.branch)) : esc(w.branch)}</td><td class=dim>${w.sha}</td><td class=n>+${w.ahead}/-${w.behind}</td><td>${w.locked ? '<span class=lock>locked</span> ' : ''}${w.dirty ? `<span class=dirty>${w.dirty} dirty</span>` : '<span class=clean>clean</span>'}</td><td>${w.preview ? link(w.preview, 'preview ↗', true) : '<span class=dim>—</span>'}</td><td class=dim>${w.lastMs ? ago(w.lastMs) : '—'}${w.lastSubj ? ' · ' + esc(w.lastSubj) : ''}</td></tr>`;
     })
     .join('');
   // key is a stable id for the collapsed-state script below — title may include
