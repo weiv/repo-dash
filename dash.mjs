@@ -464,7 +464,7 @@ function html(d) {
   // key is a stable id for the collapsed-state script below — title may include
   // a dynamic count, which can't itself be the persistence key.
   const section = (key, title, body) => (body ? `<details data-key="${key}" open><summary>${title}</summary>${body}</details>` : '');
-  const cmd = (s) => `<code>${esc(s)}</code>`;
+  const cmd = (s) => `<span class=cmdrow><code>${esc(s)}</code><button class=copybtn data-cmd="${esc(s)}" title="Copy">⧉</button></span>`;
   const cleanupRows = d.worktrees.filter((w) => w.cleanupReason);
   const cleanup = section(
     'cleanup',
@@ -531,6 +531,10 @@ a{color:#8ab4ff;text-decoration:none}a:hover{text-decoration:underline}
 .cards{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.kpi{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 10px}.kpi b{font-size:16px}
 .fb{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 10px;margin-bottom:6px;white-space:pre-wrap}
 code{background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;font-size:12px;word-break:break-all}
+.cmdrow{display:inline-flex;align-items:center;gap:5px}
+.copybtn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#a6afc4;border-radius:4px;font-size:11px;line-height:1;padding:3px 5px;cursor:pointer;flex:none}
+.copybtn:hover{background:rgba(255,255,255,.12);color:#e6eaf4}
+.copybtn.copied{color:#5fbf7f;border-color:#5fbf7f}
 details{margin:22px 0 6px}
 summary{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#a6afc4;cursor:pointer;user-select:none}
 details[open]>summary{margin-bottom:6px}</style>
@@ -551,6 +555,26 @@ ${usage}${feed}
     d.addEventListener('toggle', function(){
       if (d.open) closed.delete(d.dataset.key); else closed.add(d.dataset.key);
       localStorage.setItem(KEY, JSON.stringify(Array.from(closed)));
+    });
+  });
+  document.querySelectorAll('.copybtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var text = b.dataset.cmd;
+      var done = function(){
+        var was = b.textContent;
+        b.textContent = '✓'; b.classList.add('copied');
+        setTimeout(function(){ b.textContent = was; b.classList.remove('copied'); }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch {}
+        document.body.removeChild(ta);
+        done();
+      }
     });
   });
 })();</script>`;
